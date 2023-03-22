@@ -1,6 +1,15 @@
 #include "BluetoothSerial.h"
-#define servoPin 9
 #include <Arduino.h>
+#define servoPin 9
+#define pwm1Pin 14; 
+#define pwm2Pin 10;
+
+// Setting PWM properties
+const int freq = 30000;
+const int pwmChannel1 = 0;
+const int pwmChannel2 = 1;
+const int resolution = 8;
+int dutyCycle = 200;
 
 // Create a new servo object:
 BluetoothSerial SerialBT;
@@ -13,6 +22,18 @@ int angle = 0;
 #endif
 
 void setup() {
+  // sets the pins as outputs:
+  pinMode(pwm1Pin, OUTPUT);
+  pinMode(pwm2Pin, OUTPUT);
+  
+  // configure LED PWM functionalitites
+  ledcSetup(pwmChannel1, freq, resolution);
+  ledcSetup(pwmChannel2, freq, resolution);
+  
+  // attach the channel to the GPIO to be controlled
+  ledcAttachPin(pwm1Pin, pwmChannel1);
+  ledcAttachPin(pwm2Pin, pwmChannel2);
+
   Serial.begin(115200);
   SerialBT.begin("ESP32test"); //Bluetooth device name
   Serial.println("The device started, now you can pair it with bluetooth!");
@@ -31,10 +52,19 @@ void loop() {
     Serial.write(incomingChar);  
     analogWrite(servoPin, 0);
   }
+  delay(100);
+    while (dutyCycle <= 255){
+    ledcWrite(pwmChannel1, dutyCycle);
+    ledcWrite(pwmChannel2, dutyCycle);
+    Serial.print("Forward with duty cycle: ");
+    Serial.println(dutyCycle);
+    dutyCycle = dutyCycle + 5;
+    delay(500);
+  }
+  dutyCycle = 200;
 
     // Tell the servo to go to a particular angle:
   //myservo.write(90);
-  delay(1000);
 
   // Sweep from 0 to 180 degrees:
   /*
