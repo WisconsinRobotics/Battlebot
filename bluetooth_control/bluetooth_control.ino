@@ -1,15 +1,15 @@
 #include "BluetoothSerial.h"
 #include <Arduino.h>
 #define servoPin 9
-#define pwm1Pin 14; 
-#define pwm2Pin 10;
+#define pwm1Pin 2
+#define pwm2Pin 18
 
 // Setting PWM properties
-const int freq = 30000;
+const int freq = 1000;
 const int pwmChannel1 = 0;
 const int pwmChannel2 = 1;
 const int resolution = 8;
-int dutyCycle = 200;
+int dutyCycle = 0;
 
 // Create a new servo object:
 BluetoothSerial SerialBT;
@@ -44,16 +44,15 @@ void loop() {
     SerialBT.write(Serial.read());
   }
   if (SerialBT.available()){
-    analogWrite(servoPin, 5);
     char incomingChar = SerialBT.read();
     if (incomingChar != '\n'){
       Serial.write("Message Found");
     }
     Serial.write(incomingChar);  
-    analogWrite(servoPin, 0);
   }
   delay(100);
-    while (dutyCycle <= 255){
+
+  while (dutyCycle <= 255){
     ledcWrite(pwmChannel1, dutyCycle);
     ledcWrite(pwmChannel2, dutyCycle);
     Serial.print("Forward with duty cycle: ");
@@ -61,7 +60,7 @@ void loop() {
     dutyCycle = dutyCycle + 5;
     delay(500);
   }
-  dutyCycle = 200;
+  dutyCycle = 0;
 
     // Tell the servo to go to a particular angle:
   //myservo.write(90);
