@@ -7,7 +7,7 @@
 #include "BluetoothSerial.h"
 
 //#define USE_PIN // Uncomment this to use PIN during pairing. The pin is specified on the line below
-const char *pin = "1234"; // Change this to more secure PIN.
+//const char *pin = "1234"; // Change this to more secure PIN.
 
 String device_name = "ESP32-BT-Slave";
 uint8_t buf[2];
@@ -18,8 +18,13 @@ const uint8_t PIN_MOTOR_1B = 4;
 const uint8_t PIN_MOTOR_2A = 18;
 const uint8_t PIN_MOTOR_2B = 19;
 
+const uint8_t DEADBAND_L1 = 111, DEADBAND_L2 = 144; //lower and upper bounds for left motor/joystick deadband
+const uint8_t DEADBAND_R1 = 111, DEADBAND_R2 = 144; //lower and upper bounds for right motor/joystick deadband
+
 uint8_t input_1 = 128;
 uint8_t input_2 = 128;
+
+uint servotimer = 0; //timer for future servo implementation
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
 #error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
@@ -47,27 +52,33 @@ void loop() {
     SerialBT.write(Serial.read());
   }
   if (SerialBT.available()) {
+    SerialBT.readBytes(buf, 2);
     Serial.print(int(buf[0]));
     Serial.print("\t");
     Serial.println(int(buf[1]));
-    SerialBT.readBytes(buf, 2);
     input_1 = buf[0];
     input_2 = buf[1];
   }
-  if (input_1 > 127) {
-    analogWrite(PIN_MOTOR_1A, map(input_1, 128, 255, 0, 255));
+  if (input_1 > DEADBAND_L2) {
+    analogWrite(PIN_MOTOR_1A, map(input_1, DEADBAND_L2, 255, 0, 255));
     digitalWrite(PIN_MOTOR_1B, 0);
-  } else {
+  } else if (input_1 < DEADBAND_L1) {
     digitalWrite(PIN_MOTOR_1A, 0);
-    analogWrite(PIN_MOTOR_1B, map(input_1, 0, 127, 255, 0));    
+    analogWrite(PIN_MOTOR_1B, map(input_1, 0, DEADBAND_L1, 255, 0));    
+  } else {
+    analogWrite(PIN_MOTOR_1A, 0);
+    analogWrite(PIN_MOTOR_1B, 0);
   }
 
-  if (input_2 > 127) {
-    analogWrite(PIN_MOTOR_2A, map(input_2, 128, 255, 0, 255));
+  if (input_2 > DEADBAND_R2) {
+    analogWrite(PIN_MOTOR_2A, map(input_2, DEADBAND_R2, 255, 0, 255));
     digitalWrite(PIN_MOTOR_2B, 0);
-  } else {
+  } else if (input_2 < DEADBAND_R1) {
     digitalWrite(PIN_MOTOR_2A, 0);
-    analogWrite(PIN_MOTOR_2B, map(input_2, 0, 127, 255, 0));    
+    analogWrite(PIN_MOTOR_2B, map(input_2, 0, DEADBAND_R1, 255, 0));    
+  } else {
+    analogWrite(PIN_MOTOR_2A, 0);
+    analogWrite(PIN_MOTOR_2B, 0);
   }
   
 }
