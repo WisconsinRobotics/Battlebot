@@ -12,7 +12,8 @@
 String device_name = "ESP32-BT-Slave";
 uint8_t buf[3];
 
-int lives = 3;
+#define max_lives 3
+uint lives = max_lives;
 
 const uint8_t PIN_MOTOR_1A = 16; //pwm pins to drive the left motor
 const uint8_t PIN_MOTOR_1B = 17;
@@ -111,12 +112,19 @@ void loop() {
         servotimer = 0;
       }
     }
+
+    // Check if reset button hit and currently dead
+    if (input3 == 2 && !lives){
+      lives = max_lives
+      // Add messaging for reset
+    }
   }
 
   if (digitalRead(PIN_HIT_DETECTION) == 0) {
     digitalWrite(2, HIGH);
     if (!(--lives)){ // Triggers when lives hits 0
-        //do something
+        //do something visual
+        
     }
     
   }

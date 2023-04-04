@@ -24,7 +24,7 @@ BTN_NORTH 1 or 0
 BTN_SOUTH 1 or 0
 BTN_TL 1 or 0
 BTN_TR 1 or 0
-ABs_Z 0 to 255
+ABS_Z 0 to 255
 ABS_RZ 0 to 255
 
 L = 1/2 x + y
@@ -36,7 +36,33 @@ gamepad_read = { # mapping each input name to its most recent reading. values ar
     'Rjoy_y':128,
     'trigger':0
 }
-
+'''
+# Test 1 joystick control
+try:
+    gamepad = get_gamepad()
+    x = 0
+    y = 0
+    for event in gamepad:
+        #print(event.ev_type, event.code, event.state)
+        event_code = event.code
+        if event_code in {"BTN_TL", "BTN_TR", "ABS_Y", "ABS_RY","BTN_WEST"}:
+            if event.code == "ABS_X":
+                x = max(min(255, round((event.state / 32768 + 1) * 128 )), 0)
+            elif event.code == "ABS_Y":
+                y = max(min(255, round((event.state / 32768 + 1) * 128 )), 0) # store the value to whatever input is corresponds with
+            # Use the third byte to send different events by mapping to different numbers
+            elif event.code == "BTN_TL" or event.code == "BTN_TR":
+                gamepad_read['trigger'] = 1
+            elif event.code == "BTN_WEST":
+                gamepad_read['trigger'] = 2
+    gamepad_read['Ljoy_y'] = x/2 + y
+    gamepad_read['Rjoy_y'] = -x/2 + y
+    print("Sending " + str(list(gamepad_read.values())))
+    ser.write(pack("ccc", *[pt.to_bytes(1, 'little') for pt in gamepad_read.values()])) #send the message over serial        
+    gamepad_read['trigger'] = 0
+except:
+    print('no gamepad found')
+'''
 
 def input_loop():
     ser = ser_conn()
@@ -46,14 +72,18 @@ def input_loop():
             for event in gamepad:
                 #print(event.ev_type, event.code, event.state)
                 event_code = event.code
-                if event_code in {"BTN_TL", "BTN_TR", "ABS_Y", "ABS_RY"}:
+                if event_code in {"BTN_TL", "BTN_TR", "ABS_Y", "ABS_RY","BTN_WEST"}:
                     if event.code == "ABS_Y" or event.code == "ABS_RY":
                         gamepad_read[gamepad_map[event.code]] = max(min(255, round((event.state / 32768 + 1) * 128 )), 0) # store the value to whatever input is corresponds with
-                    else:
-                        gamepad_read['trigger'] = event.state
+                    
+                    # Use the third byte to send different events by mapping to different numbers
+                    elif event.code == "BTN_TL" or event.code == "BTN_TR":
+                        gamepad_read['trigger'] = 1
+                    elif event.code == "BTN_WEST":
+                        gamepad_read['trigger'] = 2
                     print("Sending " + str(list(gamepad_read.values())))
                     ser.write(pack("ccc", *[pt.to_bytes(1, 'little') for pt in gamepad_read.values()])) #send the message over serial
-                
+                    gamepad_read['trigger'] = 0
         except:
             print('no gamepad found')
 
