@@ -13,6 +13,8 @@ def ser_conn(): #connect to the arduino over serial. runs once at the beginning
 gamepad_map = { # what does each event code mean?
     "ABS_Y":'Ljoy_y',
     "ABS_RY":'Rjoy_y'
+    # Hammer Button
+    # Reset Button
 }
 
 gamepad_read = { # mapping each input name to its most recent reading. values are floats from -1 to 1. dict order dictates setpoint send order

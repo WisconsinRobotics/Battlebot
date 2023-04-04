@@ -36,6 +36,8 @@ uint servotimer = 0; //timer for future servo implementation
 
 BluetoothSerial SerialBT;
 
+int lives = 3;
+
 void setup() {
   Serial.begin(115200);
   SerialBT.begin(device_name); //Bluetooth device name
@@ -59,26 +61,27 @@ void loop() {
     input_1 = buf[0];
     input_2 = buf[1];
   }
-  if (input_1 > DEADBAND_L2) {
-    analogWrite(PIN_MOTOR_1A, map(input_1, DEADBAND_L2, 255, 0, 255));
-    digitalWrite(PIN_MOTOR_1B, 0);
-  } else if (input_1 < DEADBAND_L1) {
-    digitalWrite(PIN_MOTOR_1A, 0);
-    analogWrite(PIN_MOTOR_1B, map(input_1, 0, DEADBAND_L1, 255, 0));    
-  } else {
-    analogWrite(PIN_MOTOR_1A, 0);
-    analogWrite(PIN_MOTOR_1B, 0);
-  }
+  if (lives){
+    if (input_1 > DEADBAND_L2) {
+      analogWrite(PIN_MOTOR_1A, map(input_1, DEADBAND_L2, 255, 0, 255));
+      digitalWrite(PIN_MOTOR_1B, 0);
+    } else if (input_1 < DEADBAND_L1) {
+      digitalWrite(PIN_MOTOR_1A, 0);
+      analogWrite(PIN_MOTOR_1B, map(input_1, 0, DEADBAND_L1, 255, 0));    
+    } else {
+      analogWrite(PIN_MOTOR_1A, 0);
+      analogWrite(PIN_MOTOR_1B, 0);
+    }
 
-  if (input_2 > DEADBAND_R2) {
-    analogWrite(PIN_MOTOR_2A, map(input_2, DEADBAND_R2, 255, 0, 255));
-    digitalWrite(PIN_MOTOR_2B, 0);
-  } else if (input_2 < DEADBAND_R1) {
-    digitalWrite(PIN_MOTOR_2A, 0);
-    analogWrite(PIN_MOTOR_2B, map(input_2, 0, DEADBAND_R1, 255, 0));    
-  } else {
-    analogWrite(PIN_MOTOR_2A, 0);
-    analogWrite(PIN_MOTOR_2B, 0);
+    if (input_2 > DEADBAND_R2) {
+      analogWrite(PIN_MOTOR_2A, map(input_2, DEADBAND_R2, 255, 0, 255));
+      digitalWrite(PIN_MOTOR_2B, 0);
+    } else if (input_2 < DEADBAND_R1) {
+      digitalWrite(PIN_MOTOR_2A, 0);
+      analogWrite(PIN_MOTOR_2B, map(input_2, 0, DEADBAND_R1, 255, 0));    
+    } else {
+      analogWrite(PIN_MOTOR_2A, 0);
+      analogWrite(PIN_MOTOR_2B, 0);
+    }
   }
-  
 }
