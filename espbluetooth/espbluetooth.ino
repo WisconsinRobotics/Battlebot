@@ -115,7 +115,7 @@ void loop() {
 
     // Check if reset button hit and currently dead
     if (input_3 == 2 && !lives){
-      lives = max_lives
+      lives = max_lives;
       // Add messaging for reset
     }
   }
