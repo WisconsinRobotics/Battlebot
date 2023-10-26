@@ -4,13 +4,20 @@
 A minimally modified version of the bluepad32 example that will drive the motors using one joystick control
 */
 
-GamepadPtr myGamepads[BP32_MAX_GAMEPADS];
+#define ONBOARD_LED  2
+
+
+// maxGamePads
+const uint8_t maxGamePads = 1;
+GamepadPtr myGamepads[maxGamePads];
 
 const uint8_t PIN_MOTOR_1A = 16; //pwm pins to drive the left motor
 const uint8_t PIN_MOTOR_1B = 17;
 
 const uint8_t PIN_MOTOR_2A = 18; //pwm pins to drive the right motor
 const uint8_t PIN_MOTOR_2B = 19;
+
+cosnt uint8_t limit_switch = 23;
 
 const uint8_t PIN_SERVO = 5; //pwm pin to drive the servo
 
@@ -23,7 +30,7 @@ const uint hammer_cooldown = 40000; //duration after which to allow another hamm
 // Up to 4 gamepads can be connected at the same time.
 void onConnectedGamepad(GamepadPtr gp) {
   bool foundEmptySlot = false;
-  for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
+  for (int i = 0; i < maxGamePads; i++) {
     if (myGamepads[i] == nullptr) {
       Serial.printf("CALLBACK: Gamepad is connected, index=%d\n", i);
       // Additionally, you can get certain gamepad properties like:
@@ -46,7 +53,7 @@ void onConnectedGamepad(GamepadPtr gp) {
 void onDisconnectedGamepad(GamepadPtr gp) {
   bool foundGamepad = false;
 
-  for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
+  for (int i = 0; i < maxGamePads; i++) {
     if (myGamepads[i] == gp) {
       Serial.printf("CALLBACK: Gamepad is disconnected from index=%d\n", i);
       myGamepads[i] = nullptr;
@@ -78,12 +85,24 @@ void setup() {
   // Forgetting Bluetooth keys prevents "paired" gamepads to reconnect.
   // But might also fix some connection / re-connection issues.
   BP32.forgetBluetoothKeys();
+
+
+  pinMode(ONBOARD_LED,OUTPUT);
 }
 
 bool aOS{false};
 
+uint a = 0;
 // Arduino loop function. Runs in CPU 1
 void loop() {
+  if (++a % 1000 == 0){
+    Serial.printf("Still Connected to Serial\n");
+    if (a % 2000 == 0){
+      digitalWrite(ONBOARD_LED,HIGH);
+    } else {
+      digitalWrite(ONBOARD_LED,LOW);
+    }
+  }
   // This call fetches all the gamepad info from the NINA (ESP32) module.
   // Just call this function in your main loop.
   // The gamepads pointer (the ones received in the callbacks) gets updated
@@ -92,10 +111,11 @@ void loop() {
 
   // It is safe to always do this before using the gamepad API.
   // This guarantees that the gamepad is valid and connected.
-  for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
+  for (int i = 0; i < maxGamePads; i++) {
     GamepadPtr myGamepad = myGamepads[i];
 
     if (myGamepad && myGamepad->isConnected()) {
+      Serial.printf("Gamepad is connected\n");
       // There are different ways to query whether a button is pressed.
       // By query each button individually:
       //  a(), b(), x(), y(), l1(), etc...
