@@ -1,4 +1,5 @@
 #include <Bluepad32.h>
+#include <ezButton.h>
 
 /*
 A minimally modified version of the bluepad32 example that will drive the motors using one joystick control
@@ -17,13 +18,15 @@ const uint8_t PIN_MOTOR_1B = 17;
 const uint8_t PIN_MOTOR_2A = 18; //pwm pins to drive the right motor
 const uint8_t PIN_MOTOR_2B = 19;
 
-cosnt uint8_t limit_switch = 23;
+ezButton limitSwitches[] = {23,24,25,26};
 
 const uint8_t PIN_SERVO = 5; //pwm pin to drive the servo
 
 uint servotimer = 0; //timer for future servo implementation
 const uint rebound = 20000; //duration after which to raise the hammer
 const uint hammer_cooldown = 40000; //duration after which to allow another hammer strike
+
+int lives = 3;
 
 
 // This callback gets called any time a new gamepad is connected.
@@ -86,7 +89,9 @@ void setup() {
   // But might also fix some connection / re-connection issues.
   BP32.forgetBluetoothKeys();
 
-
+  for (int i = 0; i < 4; i++){
+    limitSwitches[i].setDebounceTime(50);
+  }
   pinMode(ONBOARD_LED,OUTPUT);
 }
 
@@ -103,6 +108,25 @@ void loop() {
       digitalWrite(ONBOARD_LED,LOW);
     }
   }
+
+  int pressed = 0;
+  for(int i = 0; i < 4; i++){
+    limitSwitches[i].loop(); // MUST call the loop() function first
+
+    if(limitSwitches[i].isPressed()){
+      Serial.println("The limit switch: TOUCHED -> UNTOUCHED");
+      pressed++;
+    }
+  }
+  if (pressed >= 3){
+    if(--lives <= 0){
+      Serial.println("You Died.");
+      delay(1500);
+      lives = 3;
+    }
+  }
+
+
   // This call fetches all the gamepad info from the NINA (ESP32) module.
   // Just call this function in your main loop.
   // The gamepads pointer (the ones received in the callbacks) gets updated

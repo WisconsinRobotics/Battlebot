@@ -3,8 +3,8 @@
 /*
 A minimally modified version of the bluepad32 example that will drive the motors using tank drive
 */
-
-GamepadPtr myGamepads[BP32_MAX_GAMEPADS];
+const uint8_t maxGamepads = 1;
+GamepadPtr myGamepads[maxGamepads];
 
 const uint8_t PIN_MOTOR_1A = 16; //pwm pins to drive the left motor
 const uint8_t PIN_MOTOR_1B = 17;
@@ -16,7 +16,7 @@ const uint8_t PIN_MOTOR_2B = 19;
 // Up to 4 gamepads can be connected at the same time.
 void onConnectedGamepad(GamepadPtr gp) {
   bool foundEmptySlot = false;
-  for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
+  for (int i = 0; i < maxGamepads; i++) {
     if (myGamepads[i] == nullptr) {
       Serial.printf("CALLBACK: Gamepad is connected, index=%d\n", i);
       // Additionally, you can get certain gamepad properties like:
@@ -39,7 +39,7 @@ void onConnectedGamepad(GamepadPtr gp) {
 void onDisconnectedGamepad(GamepadPtr gp) {
   bool foundGamepad = false;
 
-  for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
+  for (int i = 0; i < maxGamepads; i++) {
     if (myGamepads[i] == gp) {
       Serial.printf("CALLBACK: Gamepad is disconnected from index=%d\n", i);
       myGamepads[i] = nullptr;
@@ -83,7 +83,7 @@ void loop() {
 
   // It is safe to always do this before using the gamepad API.
   // This guarantees that the gamepad is valid and connected.
-  for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
+  for (int i = 0; i < maxGamepads; i++) {
     GamepadPtr myGamepad = myGamepads[i];
 
     if (myGamepad && myGamepad->isConnected()) {
