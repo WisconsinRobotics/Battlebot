@@ -20,11 +20,11 @@ const uint8_t PIN_MOTOR_2B = 19;
 
 ezButton limitSwitches[] = {23,24,25,26};
 
-const uint8_t PIN_SERVO = 5; //pwm pin to drive the servo
+const uint8_t PIN_SERVO = 22; //pwm pin to drive the servo
 
 uint servotimer = 0; //timer for future servo implementation
-const uint rebound = 20000; //duration after which to raise the hammer
-const uint hammer_cooldown = 40000; //duration after which to allow another hammer strike
+const uint rebound = 3000; //duration after which to raise the hammer
+const uint hammer_cooldown = 6000; //duration after which to allow another hammer strike
 
 int lives = 3;
 
@@ -93,6 +93,7 @@ void setup() {
     limitSwitches[i].setDebounceTime(50);
   }
   pinMode(ONBOARD_LED,OUTPUT);
+  analogWriteFrequency(300);
 }
 
 bool aOS{false};
@@ -139,7 +140,8 @@ void loop() {
     GamepadPtr myGamepad = myGamepads[i];
 
     if (myGamepad && myGamepad->isConnected()) {
-      Serial.printf("Gamepad is connected\n");
+      if (a % 1000 == 0) Serial.printf("Gamepad is connected\n");
+
       // There are different ways to query whether a button is pressed.
       // By query each button individually:
       //  a(), b(), x(), y(), l1(), etc...
@@ -179,19 +181,11 @@ void loop() {
         aOS = false;
       }
 
-      if (myGamepad->x()) {
-        // Duration: 255 is ~2 seconds
-        // force: intensity
-        // Some gamepads like DS3, DS4, DualSense, Switch, Xbox One S support
-        // rumble.
-        // It is possible to set it by calling:
-        myGamepad->setRumble(0xc0 /* force */, 0xc0 /* duration */);
-      }
-
       // Another way to query the buttons, is by calling buttons(), or
       // miscButtons() which return a bitmask.
       // Some gamepads also have DPAD, axis and more.
-      /*Serial.printf(
+      /*
+      Serial.printf(
           "idx=%d, dpad: 0x%02x, buttons: 0x%04x, axis L: %4d, %4d, axis R: "
           "%4d, %4d, brake: %4d, throttle: %4d, misc: 0x%02x, gyro x:%6d y:%6d "
           "z:%6d, accel x:%6d y:%6d z:%6d\n",
@@ -211,19 +205,19 @@ void loop() {
           myGamepad->accelX(),      // Accelerometer X
           myGamepad->accelY(),      // Accelerometer Y
           myGamepad->accelZ()       // Accelerometer Z
-      );*/
+      ); */
 
     int input_Y = -(myGamepad->axisY() >> 1); // y axis is flipped for some reason, so unflip it
     int input_X = myGamepad->axisX() >> 1; // x axis is seemingly not flipped for some reason
-    int input_3 = myGamepad->l2() | myGamepad->r2();
+    int input_3 = myGamepad->buttons();
 
     if (abs(input_Y) < 10) input_Y = 0;
     if (abs(input_X) < 10) input_X = 0;
 
-    analogWriteFrequency(300);
+    //analogWriteFrequency(300); // TODO: Move to setup?
     int power_L = input_Y + input_X;
     int power_R = input_Y - input_X;
-    Serial.printf("lpower: %d, rpower: %d\n", power_L, power_R);
+    //Serial.printf("lpower: %d, rpower: %d in3: %d\n", power_L, power_R, input_3);
 
     if (power_L > 0) {
       analogWrite(PIN_MOTOR_1A, min(power_L, 255));
@@ -241,14 +235,23 @@ void loop() {
       analogWrite(PIN_MOTOR_2B, min(-power_R, 255));    
     }
 
-    if (input_3 == 1 && servotimer == 0) {
+    // Buttons = 1,2,4,8
+    Serial.printf("Servo timer: %d\n",servotimer); // Synchomization rate issue? With no print statement doesn't work
+    if (input_3 > 0 && servotimer == 0) {
+      Serial.printf("Servo Triggered\n");
       servotimer++;
       analogWrite(PIN_SERVO, 180); //start swinging the hammer (servo range is [40, 180])
     } else if (servotimer > 0) {
-      servotimer++; //advance the timer
+      
+      if (++servotimer < rebound){ //advance the timer
+        analogWrite(PIN_SERVO, 180);
+      } else {
+        analogWrite(PIN_SERVO, 40);
+      }
       if (servotimer == rebound) {
-        analogWrite(PIN_SERVO, 40); //bring the hammer back to vertical
+        Serial.printf("Servo Beginning Return\n");
       } else if (servotimer == hammer_cooldown) {
+        Serial.printf("Servo Off cooldown\n");
         servotimer = 0;
       }
     } else {
