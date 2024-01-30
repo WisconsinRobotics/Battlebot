@@ -26,7 +26,8 @@ uint servotimer = 0; //timer for future servo implementation
 const uint rebound = 3000; //duration after which to raise the hammer
 const uint hammer_cooldown = 6000; //duration after which to allow another hammer strike
 
-int lives = 3;
+int lifeLEDs[] = {32,33,25}; // TODO: Find the right pins for these
+int lives = sizeof(lifeLEDs);
 
 
 // This callback gets called any time a new gamepad is connected.
@@ -92,6 +93,9 @@ void setup() {
   for (int i = 0; i < 4; i++){
     limitSwitches[i].setDebounceTime(50);
   }
+  for(int i = 0; i < sizeof(lifeLEDs); i++){
+    pinMode(lifeLEDs[i],OUTPUT);
+  }
   pinMode(ONBOARD_LED,OUTPUT);
   analogWriteFrequency(300);
 }
@@ -120,11 +124,21 @@ void loop() {
     }
   }
   if (pressed >= 3){
-    if(--lives <= 0){
-      Serial.println("You Died.");
-      delay(1500);
-      lives = 3;
+    lives -= 1;
+  }
+
+  for(int i = 0; i < sizeof(lifeLEDs); i++){
+    if(i < lives){
+      digitalWrite(lifeLEDs[i],HIGH);
+    } else{
+      digitalWrite(lifeLEDs[i],LOW);
     }
+  }
+
+  if(lives <= 0){
+    Serial.println("You Died.");
+    delay(1500);
+    lives = 3;
   }
 
 
