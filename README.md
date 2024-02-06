@@ -24,7 +24,6 @@ Currently needs to have a print statement run in each loop, other wise none of t
 
 ### Dependencies
 # Libraries:
-Bluepad32
 ezButton
 # Board:
 DOIT ESP32 DEVKIT V1
