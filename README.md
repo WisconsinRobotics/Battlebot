@@ -20,3 +20,16 @@ Sometimes the gamepads can become unpaired, or both paired to a single bot. In c
 Servo swing/rebound time still needs tuning.
 
 Currently needs to have a print statement run in each loop, other wise none of the mechanical components work. Speculated to be a synchonization issue but its still unclear.
+
+
+### Dependencies
+# Libraries:
+Bluepad32
+ezButton
+# Board:
+DOIT ESP32 DEVKIT V1
+
+# Setup Guide
+https://docs.google.com/document/d/1oNa_Z8-wAw9iX4GBooJLb7eVVErQqwH0L6ALPNRNXWY/edit
+
+
