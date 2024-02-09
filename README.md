@@ -21,6 +21,7 @@ Servo swing/rebound time still needs tuning.
 
 Currently needs to have a print statement run in each loop, other wise none of the mechanical components work. Speculated to be a synchonization issue but its still unclear.
 
+Make sure to use S mode on the gamepads
 
 ### Dependencies
 # Libraries:
