@@ -1,30 +1,50 @@
 #include <Bluepad32.h>
 #include <ezButton.h>
+#include <ESP32Servo.h>
 
 /*
 A minimally modified version of the bluepad32 example that will drive the motors using one joystick control
 */
 
-#define ONBOARD_LED  2
+#define ONBOARD_LED 2
 
 
 // maxGamePads
 const uint8_t maxGamePads = 1;
 GamepadPtr myGamepads[maxGamePads];
+Servo hammerServo;
 
-const uint8_t PIN_MOTOR_1A = 16; //pwm pins to drive the left motor
+const uint8_t PIN_MOTOR_1A = 16;  //pwm pins to drive the left motor
 const uint8_t PIN_MOTOR_1B = 17;
 
-const uint8_t PIN_MOTOR_2A = 18; //pwm pins to drive the right motor
+const uint8_t PIN_MOTOR_2A = 18;  //pwm pins to drive the right motor
 const uint8_t PIN_MOTOR_2B = 19;
 
-ezButton limitSwitches[] = {23,24,25,26};
+//  pinMode(12, INPUT_PULLUP);
+//  pinMode(13, INPUT_PULLUP);
+//  pinMode(14, INPUT_PULLUP);
+//  pinMode(27, INPUT_PULLUP);
 
-const uint8_t PIN_SERVO = 5; //pwm pin to drive the servo
+ezButton button1(12);
+ezButton button2(13);
+ezButton button3(14);
+ezButton button4(27);
 
-uint servotimer = 0; //timer for future servo implementation
-const uint rebound = 20000; //duration after which to raise the hammer
-const uint hammer_cooldown = 40000; //duration after which to allow another hammer strike
+int ledPin1 = 21;
+int ledPin2 = 33;
+int ledPin3 = 26;
+
+int buzzer = 25;
+
+
+ezButton limitSwitches[] = { button1, button2, button3, button4 };
+
+
+const uint8_t PIN_SERVO = 5;  //pwm pin to drive the servo
+
+uint servotimer = 0;                //timer for future servo implementation
+const uint rebound = 1000;          //duration after which to raise the hammer
+const uint hammer_cooldown = 2000;  //duration after which to allow another hammer strike
 
 int lives = 3;
 
@@ -49,7 +69,7 @@ void onConnectedGamepad(GamepadPtr gp) {
   }
   if (!foundEmptySlot) {
     Serial.println(
-        "CALLBACK: Gamepad connected, but could not found empty slot");
+      "CALLBACK: Gamepad connected, but could not found empty slot");
   }
 }
 
@@ -67,13 +87,21 @@ void onDisconnectedGamepad(GamepadPtr gp) {
 
   if (!foundGamepad) {
     Serial.println(
-        "CALLBACK: Gamepad disconnected, but not found in myGamepads");
+      "CALLBACK: Gamepad disconnected, but not found in myGamepads");
   }
 }
 
 // Arduino setup function. Runs in CPU 1
 void setup() {
   Serial.begin(115200);
+
+  pinMode(ledPin1, OUTPUT);
+  pinMode(ledPin2, OUTPUT);
+  pinMode(ledPin3, OUTPUT);
+  pinMode(buzzer, OUTPUT);
+
+  hammerServo.attach(PIN_SERVO);
+
   Serial.printf("Firmware: %s\n", BP32.firmwareVersion());
   const uint8_t *addr = BP32.localBdAddress();
   Serial.printf("BD Addr: %2X:%2X:%2X:%2X:%2X:%2X\n", addr[0], addr[1], addr[2],
@@ -89,42 +117,66 @@ void setup() {
   // But might also fix some connection / re-connection issues.
   BP32.forgetBluetoothKeys();
 
-  for (int i = 0; i < 4; i++){
+  for (int i = 0; i < 4; i++) {
     limitSwitches[i].setDebounceTime(50);
   }
-  pinMode(ONBOARD_LED,OUTPUT);
+  pinMode(ONBOARD_LED, OUTPUT);
 }
 
-bool aOS{false};
+bool aOS{ false };
 
 uint a = 0;
+int connected;
 // Arduino loop function. Runs in CPU 1
 void loop() {
-  if (++a % 1000 == 0){
+  if (++a % 1000 == 0) {
     Serial.printf("Still Connected to Serial\n");
-    if (a % 2000 == 0){
-      digitalWrite(ONBOARD_LED,HIGH);
+    if (a % 2000 == 0) {
+      digitalWrite(ONBOARD_LED, HIGH);
     } else {
-      digitalWrite(ONBOARD_LED,LOW);
+      digitalWrite(ONBOARD_LED, LOW);
     }
   }
 
-  int pressed = 0;
-  for(int i = 0; i < 4; i++){
-    limitSwitches[i].loop(); // MUST call the loop() function first
+  for (int i = 0; i < 4; i++) {
+    limitSwitches[i].loop();  // MUST call the loop() function first
 
-    if(limitSwitches[i].isPressed()){
+    if (limitSwitches[i].isPressed()) {
       Serial.println("The limit switch: TOUCHED -> UNTOUCHED");
-      pressed++;
+      lives--;
+    }
+    switch (lives) {
+
+      case 0:
+        digitalWrite(ledPin1, LOW);
+        digitalWrite(ledPin2, LOW);
+        digitalWrite(ledPin3, LOW);
+        break;
+      case 1:
+        digitalWrite(ledPin1, HIGH);
+        digitalWrite(ledPin2, LOW);
+        digitalWrite(ledPin3, LOW);
+        break;
+      case 2:
+        digitalWrite(ledPin1, HIGH);
+        digitalWrite(ledPin2, HIGH);
+        digitalWrite(ledPin3, LOW);
+        break;
+      case 3:
+        digitalWrite(ledPin1, HIGH);
+        digitalWrite(ledPin2, HIGH);
+        digitalWrite(ledPin3, HIGH);
+        break;
     }
   }
-  if (pressed >= 3){
-    if(--lives <= 0){
-      Serial.println("You Died.");
-      delay(1500);
-      lives = 3;
-    }
+
+  if (lives <= 0) {
+
+    Serial.println("You Died.");
+    delay(1500);
+    lives = 3;
   }
+
 
 
   // This call fetches all the gamepad info from the NINA (ESP32) module.
@@ -135,35 +187,37 @@ void loop() {
 
   // It is safe to always do this before using the gamepad API.
   // This guarantees that the gamepad is valid and connected.
+  connected = 0;
   for (int i = 0; i < maxGamePads; i++) {
     GamepadPtr myGamepad = myGamepads[i];
 
     if (myGamepad && myGamepad->isConnected()) {
+      connected++;
       Serial.printf("Gamepad is connected\n");
       // There are different ways to query whether a button is pressed.
       // By query each button individually:
       //  a(), b(), x(), y(), l1(), etc...
       if (myGamepad->a()) {
-        
+
         static int colorIdx = 0;
         // Some gamepads like DS4 and DualSense support changing the color LED.
         // It is possible to change it by calling:
         switch (colorIdx % 3) {
-        case 0:
-          // Red
-          myGamepad->setColorLED(255, 0, 0);
-          break;
-        case 1:
-          // Green
-          myGamepad->setColorLED(0, 255, 0);
-          break;
-        case 2:
-          // Blue
-          myGamepad->setColorLED(0, 0, 255);
-          break;
+          case 0:
+            // Red
+            myGamepad->setColorLED(255, 0, 0);
+            break;
+          case 1:
+            // Green
+            myGamepad->setColorLED(0, 255, 0);
+            break;
+          case 2:
+            // Blue
+            myGamepad->setColorLED(0, 0, 255);
+            break;
         }
         colorIdx++;
-      } 
+      }
 
       if (myGamepad->b() && !aOS) {
         aOS = true;
@@ -175,7 +229,7 @@ void loop() {
         // indicate the "gamepad seat". It is possible to change them by
         // calling:
         myGamepad->setPlayerLEDs(led & 0x0f);
-      } else if (!myGamepad->b()){
+      } else if (!myGamepad->b()) {
         aOS = false;
       }
 
@@ -213,50 +267,63 @@ void loop() {
           myGamepad->accelZ()       // Accelerometer Z
       );*/
 
-    int input_Y = -(myGamepad->axisY() >> 1); // y axis is flipped for some reason, so unflip it
-    int input_X = myGamepad->axisX() >> 1; // x axis is seemingly not flipped for some reason
-    int input_3 = myGamepad->l2() | myGamepad->r2();
+      int input_Y = -(myGamepad->axisY() >> 1);  // y axis is flipped for some reason, so unflip it
+      int input_X = myGamepad->axisX() >> 1;     // x axis is seemingly not flipped for some reason
+      int input_3 = myGamepad->l2() | myGamepad->r2();
 
-    if (abs(input_Y) < 10) input_Y = 0;
-    if (abs(input_X) < 10) input_X = 0;
+      if (abs(input_Y) < 10) input_Y = 0;
+      if (abs(input_X) < 10) input_X = 0;
 
-    analogWriteFrequency(300);
-    int power_L = input_Y + input_X;
-    int power_R = input_Y - input_X;
-    Serial.printf("lpower: %d, rpower: %d\n", power_L, power_R);
+      analogWriteFrequency(300);
+      int power_L = input_Y + input_X;
+      int power_R = input_Y - input_X;
+      Serial.printf("lpower: %d, rpower: %d\n", power_L, power_R);
 
-    if (power_L > 0) {
-      analogWrite(PIN_MOTOR_1A, min(power_L, 255));
-      analogWrite(PIN_MOTOR_1B, 0);
-    } else {
-      analogWrite(PIN_MOTOR_1A, 0);
-      analogWrite(PIN_MOTOR_1B, min(-power_L, 255));    
-    }
-
-    if (power_R > 0) { //handle right motor driving
-      analogWrite(PIN_MOTOR_2A, min(power_R, 255));
-      analogWrite(PIN_MOTOR_2B, 0);
-    } else {
-      analogWrite(PIN_MOTOR_2A, 0);
-      analogWrite(PIN_MOTOR_2B, min(-power_R, 255));    
-    }
-
-    if (input_3 == 1 && servotimer == 0) {
-      servotimer++;
-      analogWrite(PIN_SERVO, 180); //start swinging the hammer (servo range is [40, 180])
-    } else if (servotimer > 0) {
-      servotimer++; //advance the timer
-      if (servotimer == rebound) {
-        analogWrite(PIN_SERVO, 40); //bring the hammer back to vertical
-      } else if (servotimer == hammer_cooldown) {
-        servotimer = 0;
+      if (power_L > 0) {
+        analogWrite(PIN_MOTOR_1A, min(power_L, 255));
+        analogWrite(PIN_MOTOR_1B, 0);
+      } else {
+        analogWrite(PIN_MOTOR_1A, 0);
+        analogWrite(PIN_MOTOR_1B, min(-power_L, 255));
       }
-    } else {
-      analogWrite(PIN_SERVO, 40);
-    }
+
+      if (power_R > 0) {  //handle right motor driving
+        analogWrite(PIN_MOTOR_2A, min(power_R, 255));
+        analogWrite(PIN_MOTOR_2B, 0);
+      } else {
+        analogWrite(PIN_MOTOR_2A, 0);
+        analogWrite(PIN_MOTOR_2B, min(-power_R, 255));
+      }
+
+      if (input_3 == 1 && servotimer == 0) {
+        servotimer++;
+        hammerServo.writeMicroseconds(1600);  //start swinging the hammer
+      } else if (servotimer > 0) {
+        servotimer++;  //advance the timer
+        Serial.println(servotimer);
+        if (servotimer == rebound) {
+          hammerServo.writeMicroseconds(890);  //bring the hammer back to vertical
+        } else if (servotimer == hammer_cooldown) {
+          servotimer = 0;
+        }
+      } else {
+        hammerServo.writeMicroseconds(890);
+      }
 
       // You can query the axis and other properties as well. See Gamepad.h
       // For all the available functions.
+    }
+  }
+
+  
+  if (a % 1000 == 0) {
+    Serial.println(connected);
+    if (a % 2000 == 0 && connected == 0) {
+      Serial.println("Buzzzer On");
+      digitalWrite(buzzer, HIGH);
+    } else {
+      Serial.println("Buzzzer Off");
+      digitalWrite(buzzer, LOW);
     }
   }
 
