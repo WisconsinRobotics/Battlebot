@@ -34,11 +34,7 @@ int ledPin1 = 21;
 int ledPin2 = 33;
 int ledPin3 = 26;
 
-int buzzer = 25;
-
-
 ezButton limitSwitches[] = { button1, button2, button3, button4 };
-
 
 const uint8_t PIN_SERVO = 5;  //pwm pin to drive the servo
 
@@ -46,6 +42,8 @@ uint servotimer = 0;                //timer for future servo implementation
 const uint rebound = 1000;          //duration after which to raise the hammer
 const uint hammer_cooldown = 2000;  //duration after which to allow another hammer strike
 
+//int lifeLEDs[] = {21,33,26}; // TODO: Find the right pins for these
+//int lives = sizeof(lifeLEDs);
 int lives = 3;
 
 
@@ -98,7 +96,6 @@ void setup() {
   pinMode(ledPin1, OUTPUT);
   pinMode(ledPin2, OUTPUT);
   pinMode(ledPin3, OUTPUT);
-  pinMode(buzzer, OUTPUT);
 
   hammerServo.attach(PIN_SERVO);
 
@@ -120,6 +117,9 @@ void setup() {
   for (int i = 0; i < 4; i++) {
     limitSwitches[i].setDebounceTime(50);
   }
+  //for(int i = 0; i < sizeof(lifeLEDs); i++){
+    //pinMode(lifeLEDs[i],OUTPUT);
+  //}
   pinMode(ONBOARD_LED, OUTPUT);
 }
 
@@ -127,6 +127,7 @@ bool aOS{ false };
 
 uint a = 0;
 int connected;
+int pressed;
 // Arduino loop function. Runs in CPU 1
 void loop() {
   if (++a % 1000 == 0) {
@@ -137,16 +138,20 @@ void loop() {
       digitalWrite(ONBOARD_LED, LOW);
     }
   }
-
+  pressed = 0;
   for (int i = 0; i < 4; i++) {
     limitSwitches[i].loop();  // MUST call the loop() function first
 
     if (limitSwitches[i].isPressed()) {
       Serial.println("The limit switch: TOUCHED -> UNTOUCHED");
-      lives--;
+      pressed++;
     }
+  }
+  if (pressed >= 3){
+    lives -= 1;
+  }
+    /*
     switch (lives) {
-
       case 0:
         digitalWrite(ledPin1, LOW);
         digitalWrite(ledPin2, LOW);
@@ -168,14 +173,22 @@ void loop() {
         digitalWrite(ledPin3, HIGH);
         break;
     }
+  } */
+
+  /*
+  for(int i = 0; i < sizeof(lifeLEDs); i++){
+    if(i < lives){
+      digitalWrite(lifeLEDs[i],HIGH);
+    } else{
+      digitalWrite(lifeLEDs[i],LOW);
+    }
   }
 
   if (lives <= 0) {
-
     Serial.println("You Died.");
     delay(1500);
     lives = 3;
-  }
+  } */
 
 
 
@@ -194,53 +207,6 @@ void loop() {
     if (myGamepad && myGamepad->isConnected()) {
       connected++;
       Serial.printf("Gamepad is connected\n");
-      // There are different ways to query whether a button is pressed.
-      // By query each button individually:
-      //  a(), b(), x(), y(), l1(), etc...
-      if (myGamepad->a()) {
-
-        static int colorIdx = 0;
-        // Some gamepads like DS4 and DualSense support changing the color LED.
-        // It is possible to change it by calling:
-        switch (colorIdx % 3) {
-          case 0:
-            // Red
-            myGamepad->setColorLED(255, 0, 0);
-            break;
-          case 1:
-            // Green
-            myGamepad->setColorLED(0, 255, 0);
-            break;
-          case 2:
-            // Blue
-            myGamepad->setColorLED(0, 0, 255);
-            break;
-        }
-        colorIdx++;
-      }
-
-      if (myGamepad->b() && !aOS) {
-        aOS = true;
-        // Turn on the 4 LED. Each bit represents one LED.
-        static int led = 0;
-        led++;
-        // Some gamepads like the DS3, DualSense, Nintendo Wii, Nintendo Switch
-        // support changing the "Player LEDs": those 4 LEDs that usually
-        // indicate the "gamepad seat". It is possible to change them by
-        // calling:
-        myGamepad->setPlayerLEDs(led & 0x0f);
-      } else if (!myGamepad->b()) {
-        aOS = false;
-      }
-
-      if (myGamepad->x()) {
-        // Duration: 255 is ~2 seconds
-        // force: intensity
-        // Some gamepads like DS3, DS4, DualSense, Switch, Xbox One S support
-        // rumble.
-        // It is possible to set it by calling:
-        myGamepad->setRumble(0xc0 /* force */, 0xc0 /* duration */);
-      }
 
       // Another way to query the buttons, is by calling buttons(), or
       // miscButtons() which return a bitmask.
@@ -312,18 +278,6 @@ void loop() {
 
       // You can query the axis and other properties as well. See Gamepad.h
       // For all the available functions.
-    }
-  }
-
-  
-  if (a % 1000 == 0) {
-    Serial.println(connected);
-    if (a % 2000 == 0 && connected == 0) {
-      Serial.println("Buzzzer On");
-      digitalWrite(buzzer, HIGH);
-    } else {
-      Serial.println("Buzzzer Off");
-      digitalWrite(buzzer, LOW);
     }
   }
 
