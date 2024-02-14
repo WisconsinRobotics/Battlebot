@@ -30,9 +30,7 @@ ezButton button2(13);
 ezButton button3(14);
 ezButton button4(27);
 
-int ledPin1 = 21;
-int ledPin2 = 33;
-int ledPin3 = 26;
+
 
 ezButton limitSwitches[] = { button1, button2, button3, button4 };
 
@@ -42,9 +40,12 @@ uint servotimer = 0;                //timer for future servo implementation
 const uint rebound = 1000;          //duration after which to raise the hammer
 const uint hammer_cooldown = 2000;  //duration after which to allow another hammer strike
 
-//int lifeLEDs[] = {21,33,26}; // TODO: Find the right pins for these
-//int lives = sizeof(lifeLEDs);
-int lives = 3;
+//int ledPin1 = 21;
+//int ledPin2 = 33;
+//int ledPin3 = 26;
+int lifeLEDs[] = {21,33,26}; // TODO: Find the right pins for these
+int lives = sizeof(lifeLEDs) /sizeof(int);
+//int lives = 3;
 
 
 // This callback gets called any time a new gamepad is connected.
@@ -93,10 +94,6 @@ void onDisconnectedGamepad(GamepadPtr gp) {
 void setup() {
   Serial.begin(115200);
 
-  pinMode(ledPin1, OUTPUT);
-  pinMode(ledPin2, OUTPUT);
-  pinMode(ledPin3, OUTPUT);
-
   hammerServo.attach(PIN_SERVO);
 
   Serial.printf("Firmware: %s\n", BP32.firmwareVersion());
@@ -117,9 +114,9 @@ void setup() {
   for (int i = 0; i < 4; i++) {
     limitSwitches[i].setDebounceTime(50);
   }
-  //for(int i = 0; i < sizeof(lifeLEDs); i++){
-    //pinMode(lifeLEDs[i],OUTPUT);
-  //}
+  for(int i = 0; i < sizeof(lifeLEDs) / sizeof(int); i++){
+    pinMode(lifeLEDs[i],OUTPUT);
+  }
   pinMode(ONBOARD_LED, OUTPUT);
 }
 
@@ -150,34 +147,10 @@ void loop() {
   if (pressed >= 3){
     lives -= 1;
   }
-    /*
-    switch (lives) {
-      case 0:
-        digitalWrite(ledPin1, LOW);
-        digitalWrite(ledPin2, LOW);
-        digitalWrite(ledPin3, LOW);
-        break;
-      case 1:
-        digitalWrite(ledPin1, HIGH);
-        digitalWrite(ledPin2, LOW);
-        digitalWrite(ledPin3, LOW);
-        break;
-      case 2:
-        digitalWrite(ledPin1, HIGH);
-        digitalWrite(ledPin2, HIGH);
-        digitalWrite(ledPin3, LOW);
-        break;
-      case 3:
-        digitalWrite(ledPin1, HIGH);
-        digitalWrite(ledPin2, HIGH);
-        digitalWrite(ledPin3, HIGH);
-        break;
-    }
-  } */
 
-  /*
-  for(int i = 0; i < sizeof(lifeLEDs); i++){
-    if(i < lives){
+
+  for(int i = 0; i < sizeof(lifeLEDs) / sizeof(int); i++){
+    if(i < lives - 1){
       digitalWrite(lifeLEDs[i],HIGH);
     } else{
       digitalWrite(lifeLEDs[i],LOW);
@@ -187,8 +160,8 @@ void loop() {
   if (lives <= 0) {
     Serial.println("You Died.");
     delay(1500);
-    lives = 3;
-  } */
+    lives = sizeof(lifeLEDs) / sizeof(int);
+  }
 
 
 
