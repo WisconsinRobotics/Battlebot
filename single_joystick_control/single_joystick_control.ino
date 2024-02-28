@@ -36,9 +36,12 @@ ezButton limitSwitches[] = { button1, button2, button3, button4 };
 
 const uint8_t PIN_SERVO = 5;  //pwm pin to drive the servo
 
+/*
 uint servotimer = 0;                //timer for future servo implementation
 const uint rebound = 1000;          //duration after which to raise the hammer
-const uint hammer_cooldown = 2000;  //duration after which to allow another hammer strike
+*/
+const uint hammer_cooldown = 10000;  //duration after which to allow another hammer strike
+int servo_status = 0; // 3 possible values: 0 - Resting/inital  1 - Downswing   2 - Upswing
 
 //int ledPin1 = 21;
 //int ledPin2 = 33;
@@ -47,6 +50,8 @@ int lifeLEDs[] = {21,33,26}; // TODO: Find the right pins for these
 int lives = sizeof(lifeLEDs) /sizeof(int);
 //int lives = 3;
 
+hw_timer_t *led_Timer = NULL; //https://deepbluembedded.com/esp32-timers-timer-interrupt-tutorial-arduino-ide/
+hw_timer_t *hammer_Timer = NULL;
 
 // This callback gets called any time a new gamepad is connected.
 // Up to 4 gamepads can be connected at the same time.
@@ -90,11 +95,34 @@ void onDisconnectedGamepad(GamepadPtr gp) {
   }
 }
 
+
+void IRAM_ATTR DebugLED() {
+    digitalWrite(ONBOARD_LED, !digitalRead(ONBOARD_LED));
+}
+
+void IRAM_ATTR ServoTimeout() {
+  //Serial.printf("Hammer Timeout Triggered\n");
+  switch (servo_status){
+    case 1: // When bottom reached
+      servo_status = 2;
+      break;
+    case 2: // Reset for a hammer cooldown
+      servo_status = 0;
+      break;
+    default: // Reset State, includes 0
+      break;
+  }
+
+}
+
+
 // Arduino setup function. Runs in CPU 1
 void setup() {
   Serial.begin(115200);
 
   hammerServo.attach(PIN_SERVO);
+  hammerServo.writeMicroseconds(890);
+
 
   Serial.printf("Firmware: %s\n", BP32.firmwareVersion());
   const uint8_t *addr = BP32.localBdAddress();
@@ -104,8 +132,7 @@ void setup() {
   // Setup the Bluepad32 callbacks
   BP32.setup(&onConnectedGamepad, &onDisconnectedGamepad);
 
-  // "forgetBluetoothKeys()" should be called when the user performs
-  // a "device factory reset", or similar.
+  // "forgetBluetoothKeys()" should be called when the user performs a "device factory reset", or similar.
   // Calling "forgetBluetoothKeys" in setup() just as an example.
   // Forgetting Bluetooth keys prevents "paired" gamepads to reconnect.
   // But might also fix some connection / re-connection issues.
@@ -118,23 +145,23 @@ void setup() {
     pinMode(lifeLEDs[i],OUTPUT);
   }
   pinMode(ONBOARD_LED, OUTPUT);
+
+
+  led_Timer = timerBegin(0, 8000, true); // Sets timer to increment ~0.1 ms
+  timerAttachInterrupt(led_Timer, &DebugLED, true); // Function attached
+  timerAlarmWrite(led_Timer, 10000, true); // Timer is set to call function every 1 second
+  timerAlarmEnable(led_Timer);  // Start timer
+
+  hammer_Timer = timerBegin(1, 8000, true); 
+  timerAttachInterrupt(hammer_Timer, &ServoTimeout, true);
+  timerAlarmWrite(hammer_Timer, hammer_cooldown, true); // False makes timer only run once
+  timerAlarmEnable(hammer_Timer);  // Start timer
+
 }
 
-bool aOS{ false };
-
-uint a = 0;
-int connected;
 int pressed;
 // Arduino loop function. Runs in CPU 1
 void loop() {
-  if (++a % 1000 == 0) {
-    Serial.printf("Still Connected to Serial\n");
-    if (a % 2000 == 0) {
-      digitalWrite(ONBOARD_LED, HIGH);
-    } else {
-      digitalWrite(ONBOARD_LED, LOW);
-    }
-  }
   pressed = 0;
   for (int i = 0; i < 4; i++) {
     limitSwitches[i].loop();  // MUST call the loop() function first
@@ -173,14 +200,10 @@ void loop() {
 
   // It is safe to always do this before using the gamepad API.
   // This guarantees that the gamepad is valid and connected.
-  connected = 0;
   for (int i = 0; i < maxGamePads; i++) {
     GamepadPtr myGamepad = myGamepads[i];
 
     if (myGamepad && myGamepad->isConnected()) {
-      connected++;
-      Serial.printf("Gamepad is connected\n");
-
       // Another way to query the buttons, is by calling buttons(), or
       // miscButtons() which return a bitmask.
       // Some gamepads also have DPAD, axis and more.
@@ -234,20 +257,17 @@ void loop() {
         analogWrite(PIN_MOTOR_2B, min(-power_R, 255));
       }
 
-      if (input_3 == 1 && servotimer == 0) {
-        servotimer++;
-        hammerServo.writeMicroseconds(1600);  //start swinging the hammer
-      } else if (servotimer > 0) {
-        servotimer++;  //advance the timer
-        Serial.println(servotimer);
-        if (servotimer == rebound) {
-          hammerServo.writeMicroseconds(890);  //bring the hammer back to vertical
-        } else if (servotimer == hammer_cooldown) {
-          servotimer = 0;
-        }
-      } else {
-        hammerServo.writeMicroseconds(890);
+      if (input_3 == 1 && servo_status == 0){
+        servo_status = 1;
+        Serial.printf("Swinging Hammer\n");
+
+        timerRestart(hammer_Timer);
+        hammerServo.writeMicroseconds(1600);
+      } else if (servo_status >= 2){
+        hammerServo.writeMicroseconds(860);
+
       }
+
 
       // You can query the axis and other properties as well. See Gamepad.h
       // For all the available functions.
