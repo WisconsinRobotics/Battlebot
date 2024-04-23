@@ -2,7 +2,7 @@
 #include <ezButton.h>
 #include <ESP32Servo.h>
 #include <BattleBotFunctions.h>
-
+#include <uni.h>
 
 /*
 A minimally modified version of the bluepad32 example that will drive the motors using one joystick control
@@ -10,15 +10,25 @@ A minimally modified version of the bluepad32 example that will drive the motors
 
 #define ONBOARD_LED 2
 
+// Arduino sketch
+// Include Uni API.
+// E4:17:D8:75:BF:22 red controller MAC address
+
+// E4:17:D8:5A:C8:83 blue controller MAC address
+// The address of the gamepad that is allowed to connect.
+// You can add up to four entries.
+static const char * controller_addr_string = "E4:17:D8:75:BF:22";
+
 
 // maxGamePads
 const uint8_t maxGamePads = 1;
+
 GamepadPtr myGamepads[maxGamePads];
 Servo hammerServo;
-const int PIN_MOTOR_1A = 16;  //pwm pins to drive the left motor
-const int PIN_MOTOR_1B = 17;
-const int PIN_MOTOR_2A = 18;  //pwm pins to drive the right motor
-const int PIN_MOTOR_2B = 19;
+const int PIN_MOTOR_1A = 26;  //pwm pins to drive the left motor
+const int PIN_MOTOR_1B = 25;
+const int PIN_MOTOR_2A = 33;  //pwm pins to drive the right motor
+const int PIN_MOTOR_2B = 32;
 
 BattleBotFunctions botFunctions = BattleBotFunctions(PIN_MOTOR_1A, PIN_MOTOR_1B, PIN_MOTOR_2A, PIN_MOTOR_2B);
 
@@ -29,7 +39,7 @@ ezButton button4(27);
 
 ezButton limitSwitches[] = { button1, button2, button3, button4 };
 
-const uint8_t PIN_SERVO = 5;  //pwm pin to drive the servo
+const uint8_t PIN_SERVO = 22;  //pwm pin to drive the servo
 
 const uint hammer_cooldown = 10000;  //duration after which to allow another hammer strike
 int servo_status = 0;
@@ -103,6 +113,23 @@ void onDisconnectedGamepad(GamepadPtr gp) {
 
 // Arduino setup function. Runs in CPU 1
 void setup() {
+      // Somewhere in your "setup" add the following lines:
+    bd_addr_t controller_addr;
+
+    // Parse human-readable Bluetooth address.
+    sscanf_bd_addr(controller_addr_string, controller_addr);
+
+    // Notice that this address will be added in the Non-volatile-storage (NVS).
+    // If the device reboots, the address will still be stored.
+    // Adding a duplicate value will do nothing.
+    // You can add up to four entries in the allowlist.
+    uni_bt_allowlist_add_addr(controller_addr);
+
+    // Finally, enable the allowlist.
+    // Similar to the "add_addr", its value gets stored in the NVS.
+    uni_bt_allowlist_set_enabled(true);
+
+    BP32.forgetBluetoothKeys();
   Serial.begin(115200);
   // sets motor pins to output pins
 
@@ -117,7 +144,7 @@ void setup() {
   // Calling "forgetBluetoothKeys" in setup() just as an example.
   // Forgetting Bluetooth keys prevents "paired" gamepads to reconnect.
   // But might also fix some connection / re-connection issues.
-  BP32.forgetBluetoothKeys();
+  // BP32.forgetBluetoothKeys();
 
   // setup lifeLEDs and limit switches for hit detection
   for (int i = 0; i < 4; i++) {
@@ -145,7 +172,6 @@ void setup() {
 // Arduino loop function. Runs in CPU 1
 void loop() {
  
-  
   // This call fetches all the gamepad info from the NINA (ESP32) module.
   // Just call this function in your main loop.
   // The gamepads pointer (the ones received in the callbacks) gets updated
