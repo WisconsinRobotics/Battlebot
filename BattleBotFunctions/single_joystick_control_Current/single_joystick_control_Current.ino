@@ -1,7 +1,7 @@
 #include <Bluepad32.h>
 #include <ezButton.h>
 #include <ESP32Servo.h>
-#include <BattleBotFunctions.h>
+#include "BattleBotFunctions.h"
 #include <uni.h>
 
 /*
@@ -17,7 +17,7 @@ A minimally modified version of the bluepad32 example that will drive the motors
 // E4:17:D8:5A:C8:83 blue controller MAC address
 // The address of the gamepad that is allowed to connect.
 // You can add up to four entries.
-static const char * controller_addr_string = "E4:17:D8:75:BF:22";
+static const char * controller_addr_string = "E4:17:D8:5A:C8:83";
 
 
 // maxGamePads
@@ -32,8 +32,8 @@ const int PIN_MOTOR_2B = 32;
 
 BattleBotFunctions botFunctions = BattleBotFunctions(PIN_MOTOR_1A, PIN_MOTOR_1B, PIN_MOTOR_2A, PIN_MOTOR_2B);
 
-ezButton button1(12);
-ezButton button2(13);
+ezButton button1(13);
+ezButton button2(12);
 ezButton button3(14);
 ezButton button4(27);
 
@@ -44,7 +44,7 @@ const uint8_t PIN_SERVO = 22;  //pwm pin to drive the servo
 const uint hammer_cooldown = 10000;  //duration after which to allow another hammer strike
 int servo_status = 0;
 
-int lifeLEDs[] = {21,33,26}; // TODO: Find the right pins for these
+int lifeLEDs[] = {15,2,4}; // TODO: Find the right pins for these
 int lives = 3; //(int) (sizeof(lifeLEDs)/sizeof(int));
 
 hw_timer_t *led_Timer = NULL;
